@@ -1,0 +1,22 @@
+---
+  version: 1
+  schedule:
+    type: "simple"
+    interval: "10s"
+  workflow:
+    collect:
+      metrics:
+        /staples/bigip/node/*/*/status_availability_state: {}
+        /staples/bigip/node/*/*/tot_requests: {}
+        /staples/bigip/pool/*/*/active_member_cnt: {}
+        /staples/bigip/pool/*/*/connq_age_edm: {}
+      config:
+        /staples/bigip:
+          host: "example.com"
+          username: "user"
+          password: "pass"
+      publish:
+        -
+          plugin_name: "file"
+          config:
+            file: "/tmp/bigip_snap.txt"

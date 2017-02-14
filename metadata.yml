@@ -1,0 +1,8 @@
+name: bigip
+type: collector
+maintainer: Staples, Inc.
+license: Apache-2.0
+description: "Collects metrics from the BIG IP rest api"
+badge:
+ci:
+status: Experimental
