@@ -13,7 +13,7 @@ distributed under the License is distributed on an "AS IS" BASIS,
 WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License. -->
-[![Build Status](https://travis-ci.org/Staples-Inc/snap-plugin-collector-bigip.svg?branch=master)](https://travis-ci.com/Staples-Inc/snap-plugin-collector-bigip)
+[![Build Status](https://travis-ci.com/Staples-Inc/snap-plugin-collector-bigip.svg?token=8kDwA9xTipr685PkAuF2&branch=master)](https://travis-ci.com/Staples-Inc/snap-plugin-collector-bigip)
 # Snap collector plugin - BigIp
 
 This plugin collects BigIp statistics using the IControl rest API.

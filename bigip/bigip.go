@@ -20,6 +20,7 @@ limitations under the License.
 
 import (
 	"strconv"
+	"strings"
 	"sync"
 
 	"github.com/intelsdi-x/snap-plugin-lib-go/v1/plugin"
@@ -74,19 +75,19 @@ func (c *F5Collector) loadConfigs(cfg plugin.Config) error {
 		return err
 	}
 	if port, err = cfg.GetInt("port"); err != nil {
-		return err
+		port = 443
 	}
 	if user, err = cfg.GetString("username"); err != nil {
-		return err
+		user = ""
 	}
 	if pass, err = cfg.GetString("password"); err != nil {
-		return err
+		pass = ""
 	}
 	if auth, err = cfg.GetBool("basic_auth"); err != nil {
-		return err
+		auth = false
 	}
 	if https, err = cfg.GetBool("https"); err != nil {
-		return err
+		https = true
 	}
 	authMethod := f5.TOKEN
 	if auth {
@@ -115,6 +116,7 @@ func (c F5Collector) GetConfigPolicy() (plugin.ConfigPolicy, error) {
 	cfg.AddNewStringRule([]string{"staples", "bigip"}, "password", false)
 	cfg.AddNewBoolRule([]string{"staples", "bigip"}, "basic_auth", false, plugin.SetDefaultBool(false))
 	cfg.AddNewBoolRule([]string{"staples", "bigip"}, "https", false, plugin.SetDefaultBool(true))
+	cfg.AddNewBoolRule([]string{"staples", "bigip"}, "sanitize", false, plugin.SetDefaultBool(false))
 	return *cfg, nil
 }
 
@@ -124,7 +126,18 @@ func (c F5Collector) GetMetricTypes(cfg plugin.Config) ([]plugin.Metric, error) 
 	metrics = append(metrics, getPoolMetricsCatalog()...)
 	metrics = append(metrics, getRuleMetricsCatalog()...)
 	metrics = append(metrics, getVSMetricsCatalog()...)
+
 	return metrics, nil
+}
+
+func sanitizeNodes(mts []plugin.Metric) error {
+	r := strings.NewReplacer(".", "_")
+	for i := range mts {
+		for n := range mts[i].Namespace {
+			mts[i].Namespace[n].Value = r.Replace(mts[i].Namespace[n].Value)
+		}
+	}
+	return nil
 }
 
 // CollectMetrics collects the requested metrics from this plugin
@@ -132,7 +145,11 @@ func (c F5Collector) CollectMetrics(mts []plugin.Metric) ([]plugin.Metric, error
 	if err := c.loadConfigs(mts[0].Config); err != nil {
 		return nil, err
 	}
-
+	var sanitize bool
+	var err error
+	if sanitize, err = mts[0].Config.GetBool("sanitize"); err != nil {
+		sanitize = false
+	}
 	metricChan := make(chan plugin.Metric)
 	wg := sync.WaitGroup{}
 	wg.Add(4)
@@ -153,5 +170,11 @@ func (c F5Collector) CollectMetrics(mts []plugin.Metric) ([]plugin.Metric, error
 		metrics = append(metrics, mt)
 	}
 
+	if sanitize {
+		err = sanitizeNodes(metrics)
+		if err != nil {
+			return nil, err
+		}
+	}
 	return metrics, nil
 }
