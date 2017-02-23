@@ -20,6 +20,7 @@ limitations under the License.
 
 import (
 	"net/http"
+	"strings"
 	"sync"
 	"testing"
 
@@ -94,6 +95,7 @@ func TestBigIPCollector(t *testing.T) {
 				"password":   "pass",
 				"basic_auth": true,
 				"https":      false,
+				"sanitize":   false,
 			}
 		}
 		results, err := bc.CollectMetrics(mt)
@@ -120,6 +122,7 @@ func TestBigIPCollector(t *testing.T) {
 			"password":   "pass",
 			"basic_auth": true,
 			"https":      false,
+			"sanitize":   false,
 		}
 		err := bc.loadConfigs(cfg)
 		Convey("No error returned", func() {
@@ -129,4 +132,83 @@ func TestBigIPCollector(t *testing.T) {
 			So(bc.initialized, ShouldBeTrue)
 		})
 	})
+	Convey("Test CollectMetrics with sanitized metrics", t, func() {
+		bc := F5Collector{
+			initializedMutex: new(sync.Mutex),
+			initialized:      false,
+		}
+		mt, _ := bc.GetMetricTypes(nil)
+		for i := range mt {
+			mt[i].Config = plugin.Config{
+				"host":       "example.com",
+				"port":       int64(443),
+				"username":   "user",
+				"password":   "pass",
+				"basic_auth": true,
+				"https":      false,
+				"sanitize":   true,
+			}
+		}
+		results, err := bc.CollectMetrics(mt)
+		So(len(results), ShouldBeGreaterThan, 0)
+		Convey("Ensure no error once initialized", func() {
+			So(err, ShouldBeNil)
+		})
+		Convey("Ensure all node values are no longer dot separated", func() {
+			for i := range results {
+				for n := range results[i].Namespace {
+					So(strings.ContainsAny(results[i].Namespace[n].Value, "."), ShouldBeFalse)
+				}
+			}
+		})
+	})
+
+	Convey("Test CollectMetrics with empty non essential configs", t, func() {
+		bc := F5Collector{
+			initializedMutex: new(sync.Mutex),
+			initialized:      false,
+		}
+		mt, _ := bc.GetMetricTypes(nil)
+		for i := range mt {
+			mt[i].Config = plugin.Config{
+				"host": "example.com",
+				// "port":       int64(443),
+				// "username":   "user",
+				// "password":   "pass",
+				// "basic_auth": true,
+				// "https":      false,
+				// "sanitize":   true,
+			}
+		}
+		results, err := bc.CollectMetrics(mt)
+		Convey("Ensure no results and no error", func() {
+			So(len(results), ShouldBeZeroValue)
+			So(err, ShouldBeNil)
+		})
+	})
+
+	Convey("Test CollectMetrics with empty configs", t, func() {
+		bc := F5Collector{
+			initializedMutex: new(sync.Mutex),
+			initialized:      false,
+		}
+		mt, _ := bc.GetMetricTypes(nil)
+		for i := range mt {
+			mt[i].Config = plugin.Config{
+			// "host": "example.com",
+			// "port":       int64(443),
+			// "username":   "user",
+			// "password":   "pass",
+			// "basic_auth": true,
+			// "https":      false,
+			// "sanitize":   true,
+			}
+		}
+		results, err := bc.CollectMetrics(mt)
+		Convey("Ensure error", func() {
+			So(results, ShouldBeNil)
+			So(err, ShouldNotBeNil)
+		})
+	})
+
 }
